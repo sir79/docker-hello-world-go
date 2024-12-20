@@ -1,0 +1,61 @@
+services:
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "http://localhost:8080" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    develop:
+      watch:
+        - action: rebuild
+          path: ./
+          target: /go
+    ports:
+      - "8080:8081"
+    environment:
+      - PORT=8081
+    env_file:
+      - .env.api
+    volumes:
+      - mydata:/data
+    networks:
+      - myapp-network
+  db:
+    image: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env.db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - myapp-network
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    networks:
+      - myapp-network
+    depends_on:
+      - api
+  adminer:
+    image: adminer
+    profiles:
+      - dev
+    ports:
+      - "9000:8080"
+volumes:
+  mydata:
+  postgres_data:
+networks:
+  myapp-network:
